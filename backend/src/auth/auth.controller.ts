@@ -163,9 +163,12 @@ export class AuthController {
 
   private cookieOptions(): CookieOptions {
     const isProd = this.configService.get<string>('NODE_ENV') === 'production';
+    // Cross-site cookies need SameSite=None + Secure in production (frontend on
+    // Vercel, backend on Railway = different registrable domains). In dev both
+    // run on localhost so SameSite=Lax works and lets us avoid HTTPS locally.
     return {
       httpOnly: true,
-      sameSite: 'lax',
+      sameSite: isProd ? 'none' : 'lax',
       secure: isProd,
       path: '/',
     };
