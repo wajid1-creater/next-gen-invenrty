@@ -1,18 +1,16 @@
 /**
- * Validated public env vars.
+ * Public env vars accessible at runtime.
  *
  * Because these are `NEXT_PUBLIC_*`, the values are inlined at build time —
- * this module runs both at build and at runtime in the browser. Throwing here
- * fails the build fast instead of letting undefined values silently propagate.
+ * this module runs both at build and at runtime in the browser.
+ *
+ * `apiUrl` falls back to localhost so a fresh `npm run dev` works without
+ * a `.env.local` file. In production builds, the operator should set
+ * NEXT_PUBLIC_API_URL explicitly to point at the real backend.
  */
 
-function required(name: string, value: string | undefined): string {
-  if (!value || value.trim() === '') {
-    throw new Error(`Missing required environment variable: ${name}`);
-  }
-  return value;
-}
+const DEV_DEFAULT_API_URL = 'http://localhost:4000/api';
 
 export const env = {
-  apiUrl: required('NEXT_PUBLIC_API_URL', process.env.NEXT_PUBLIC_API_URL),
+  apiUrl: process.env.NEXT_PUBLIC_API_URL?.trim() || DEV_DEFAULT_API_URL,
 } as const;
