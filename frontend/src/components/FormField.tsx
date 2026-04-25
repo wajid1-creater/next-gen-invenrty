@@ -1,18 +1,33 @@
+/**
+ * Form field primitives.
+ *
+ * NOTE: this file's `Button` is a legacy shim for pages that still import it
+ * from FormField. New code should import from `@/components/Button` directly,
+ * which has more variants and better behaviour.
+ */
+import BaseButton from './Button';
+
 interface FormFieldProps {
   label: string;
   children: React.ReactNode;
   required?: boolean;
   hint?: string;
+  error?: string;
 }
 
-export default function FormField({ label, children, required, hint }: FormFieldProps) {
+export default function FormField({ label, children, required, hint, error }: FormFieldProps) {
   return (
     <div>
-      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
-        {label}{required && <span className="text-red-400 ml-0.5">*</span>}
+      <label className="block text-[11px] font-medium text-zinc-600 mb-1.5">
+        {label}
+        {required && <span className="text-red-500 ml-0.5">*</span>}
       </label>
       {children}
-      {hint && <p className="text-[10px] text-gray-400 mt-1">{hint}</p>}
+      {error ? (
+        <p className="text-[11px] text-red-600 mt-1">{error}</p>
+      ) : hint ? (
+        <p className="text-[11px] text-zinc-400 mt-1">{hint}</p>
+      ) : null}
     </div>
   );
 }
@@ -21,28 +36,49 @@ export function Input({ className = '', ...props }: React.InputHTMLAttributes<HT
   return (
     <input
       {...props}
-      className={`w-full px-4 py-2.5 bg-gray-50/80 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 transition-all duration-200 hover:border-gray-300 focus:bg-white focus:border-green-500 focus:ring-2 focus:ring-green-500/10 ${className}`}
+      className={`w-full h-9 px-3 bg-white border border-zinc-200 rounded-md text-[13px] text-zinc-900 placeholder-zinc-400 transition-colors hover:border-zinc-300 focus:outline-none focus:border-emerald-500 disabled:bg-zinc-50 disabled:text-zinc-400 ${className}`}
     />
   );
 }
 
-export function Select({ className = '', children, ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) {
+export function Select({
+  className = '',
+  children,
+  ...props
+}: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <select
       {...props}
-      className={`w-full px-4 py-2.5 bg-gray-50/80 border border-gray-200 rounded-xl text-sm text-gray-900 transition-all duration-200 hover:border-gray-300 focus:bg-white focus:border-green-500 focus:ring-2 focus:ring-green-500/10 appearance-none ${className}`}
+      className={`w-full h-9 px-3 bg-white border border-zinc-200 rounded-md text-[13px] text-zinc-900 transition-colors hover:border-zinc-300 focus:outline-none focus:border-emerald-500 disabled:bg-zinc-50 disabled:text-zinc-400 ${className}`}
     >
       {children}
     </select>
   );
 }
 
-export function Button({ variant = 'primary', className = '', children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' | 'danger' }) {
-  const base = 'px-6 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 flex items-center gap-2 justify-center';
-  const variants = {
-    primary: 'bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 shadow-lg shadow-green-500/20 hover:shadow-green-500/30',
-    secondary: 'border border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300',
-    danger: 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-100',
-  };
-  return <button {...props} className={`${base} ${variants[variant]} ${className}`}>{children}</button>;
+export function Textarea({
+  className = '',
+  ...props
+}: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return (
+    <textarea
+      {...props}
+      className={`w-full px-3 py-2 bg-white border border-zinc-200 rounded-md text-[13px] text-zinc-900 placeholder-zinc-400 transition-colors hover:border-zinc-300 focus:outline-none focus:border-emerald-500 disabled:bg-zinc-50 disabled:text-zinc-400 ${className}`}
+    />
+  );
+}
+
+/** Legacy shim — prefer importing Button from '@/components/Button'. */
+export function Button({
+  variant = 'primary',
+  ...props
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: 'primary' | 'secondary' | 'danger';
+}) {
+  const map = {
+    primary: 'primary',
+    secondary: 'outline',
+    danger: 'danger',
+  } as const;
+  return <BaseButton variant={map[variant]} {...props} />;
 }

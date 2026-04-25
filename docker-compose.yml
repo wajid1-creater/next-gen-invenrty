@@ -1,17 +1,74 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:16-alpine
     container_name: ngim-postgres
     environment:
-      POSTGRES_DB: next_gen_inventory
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres123
+      POSTGRES_DB: ${DB_NAME:-next_gen_inventory}
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
     ports:
-      - '5432:5432'
+      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${DB_USERNAME:-postgres} -d ${DB_NAME:-next_gen_inventory}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - ngim
+
+  backend:
+    build:
+      context: ./backend
+    container_name: ngim-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      DB_NAME: ${DB_NAME:-next_gen_inventory}
+      DB_MIGRATIONS_RUN: "true"
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET is required}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-15m}
+      JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION:-7d}
+      PORT: 4000
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      THROTTLE_TTL_SECONDS: ${THROTTLE_TTL_SECONDS:-60}
+      THROTTLE_LIMIT: ${THROTTLE_LIMIT:-120}
+    ports:
+      - "4000:4000"
+    networks:
+      - ngim
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000/api}
+    container_name: ngim-frontend
+    depends_on:
+      - backend
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000/api}
+    ports:
+      - "3000:3000"
+    networks:
+      - ngim
 
 volumes:
   pgdata:
+
+networks:
+  ngim:
+    driver: bridge

@@ -1,0 +1,12 @@
+# Workspace-level prettier ignore (used by Husky pre-commit hook).
+# Each subdir has its own .prettierrc — Prettier auto-discovers it per file.
+
+**/node_modules
+**/dist
+**/.next
+**/coverage
+**/package-lock.json
+backend/dist
+frontend/.next
+frontend/next-env.d.ts
+.husky/_

@@ -1,9 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { ILike, Repository } from 'typeorm';
 import { Product } from './entities/product.entity';
 import { BomItem } from './entities/bom-item.entity';
 import { CreateProductDto, CreateBomItemDto } from './dto/create-product.dto';
+import {
+  buildPage,
+  type Page,
+  type PaginationQueryDto,
+} from '../common/dto/pagination.dto';
 
 @Injectable()
 export class ProductsService {
@@ -17,8 +22,18 @@ export class ProductsService {
     return this.productRepo.save(product);
   }
 
-  findAll() {
-    return this.productRepo.find({ order: { createdAt: 'DESC' }, relations: ['bomItems'] });
+  async findAll(query: PaginationQueryDto): Promise<Page<Product>> {
+    const where = query.q
+      ? [{ name: ILike(`%${query.q}%`) }, { sku: ILike(`%${query.q}%`) }]
+      : undefined;
+    const [items, total] = await this.productRepo.findAndCount({
+      where,
+      order: { createdAt: 'DESC' },
+      relations: ['bomItems'],
+      skip: (query.page - 1) * query.pageSize,
+      take: query.pageSize,
+    });
+    return buildPage(items, total, query);
   }
 
   async findOne(id: string) {

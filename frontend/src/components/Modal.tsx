@@ -1,4 +1,5 @@
 'use client';
+import { useEffect } from 'react';
 import { X } from 'lucide-react';
 
 interface ModalProps {
@@ -17,22 +18,52 @@ const sizeMap = {
   xl: 'max-w-4xl',
 };
 
-export default function Modal({ open, onClose, title, subtitle, children, size = 'lg' }: ModalProps) {
+export default function Modal({
+  open,
+  onClose,
+  title,
+  subtitle,
+  children,
+  size = 'lg',
+}: ModalProps) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm animate-fade-in" onClick={onClose} />
-      <div className={`relative bg-white rounded-3xl shadow-2xl ${sizeMap[size]} w-full max-h-[90vh] overflow-auto animate-fade-in-scale`}>
-        <div className="sticky top-0 bg-white/90 backdrop-blur-md z-10 flex items-center justify-between p-6 pb-4 border-b border-gray-100 rounded-t-3xl">
+      <div
+        className="fixed inset-0 bg-zinc-950/40 backdrop-blur-sm animate-fade-in"
+        onClick={onClose}
+        aria-hidden
+      />
+      <div
+        role="dialog"
+        aria-labelledby="modal-title"
+        className={`relative bg-white rounded-lg shadow-[0_24px_48px_rgba(9,9,11,0.18)] ${sizeMap[size]} w-full max-h-[90vh] overflow-auto animate-scale-in`}
+      >
+        <div className="sticky top-0 bg-white z-10 flex items-start justify-between px-5 py-4 border-b border-zinc-200">
           <div>
-            <h3 className="text-lg font-bold text-gray-900">{title}</h3>
-            {subtitle && <p className="text-sm text-gray-500 mt-0.5">{subtitle}</p>}
+            <h3 id="modal-title" className="text-base font-semibold text-zinc-900">
+              {title}
+            </h3>
+            {subtitle && <p className="text-[13px] text-zinc-500 mt-0.5">{subtitle}</p>}
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
-            <X size={18} className="text-gray-400" />
+          <button
+            onClick={onClose}
+            className="p-1.5 -mr-1 hover:bg-zinc-100 rounded-md transition-colors"
+            aria-label="Close"
+          >
+            <X size={16} className="text-zinc-500" />
           </button>
         </div>
-        <div className="p-6">{children}</div>
+        <div className="p-5">{children}</div>
       </div>
     </div>
   );

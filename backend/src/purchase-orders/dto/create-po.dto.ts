@@ -1,4 +1,10 @@
-import { IsNotEmpty, IsOptional, IsEnum, IsArray, IsNumber } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsEnum,
+  IsArray,
+  IsNumber,
+} from 'class-validator';
 import { POStatus } from '../entities/purchase-order.entity';
 
 export class CreatePurchaseOrderDto {
@@ -6,7 +12,12 @@ export class CreatePurchaseOrderDto {
   supplierId: string;
 
   @IsArray()
-  items: { productId: string; productName: string; quantity: number; unitPrice: number }[];
+  items: {
+    productId: string;
+    productName: string;
+    quantity: number;
+    unitPrice: number;
+  }[];
 
   @IsOptional()
   @IsNumber()

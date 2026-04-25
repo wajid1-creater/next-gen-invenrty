@@ -10,7 +10,12 @@ export class NotificationsService {
     private repo: Repository<Notification>,
   ) {}
 
-  create(userId: string, title: string, message: string, type: NotificationType) {
+  create(
+    userId: string,
+    title: string,
+    message: string,
+    type: NotificationType,
+  ) {
     const notif = this.repo.create({ userId, title, message, type });
     return this.repo.save(notif);
   }

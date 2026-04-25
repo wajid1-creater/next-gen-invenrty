@@ -1,7 +1,18 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
+  Body,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { SuppliersService } from './suppliers.service';
 import { CreateSupplierDto } from './dto/create-supplier.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PaginationQueryDto } from '../common/dto/pagination.dto';
 
 @Controller('suppliers')
 @UseGuards(JwtAuthGuard)
@@ -14,8 +25,8 @@ export class SuppliersController {
   }
 
   @Get()
-  findAll() {
-    return this.service.findAll();
+  findAll(@Query() pagination: PaginationQueryDto) {
+    return this.service.findAll(pagination);
   }
 
   @Get(':id')

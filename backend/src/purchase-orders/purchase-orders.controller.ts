@@ -1,7 +1,18 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
+  Body,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { PurchaseOrdersService } from './purchase-orders.service';
 import { CreatePurchaseOrderDto } from './dto/create-po.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PaginationQueryDto } from '../common/dto/pagination.dto';
 
 @Controller('purchase-orders')
 @UseGuards(JwtAuthGuard)
@@ -14,8 +25,8 @@ export class PurchaseOrdersController {
   }
 
   @Get()
-  findAll() {
-    return this.service.findAll();
+  findAll(@Query() pagination: PaginationQueryDto) {
+    return this.service.findAll(pagination);
   }
 
   @Get(':id')
@@ -24,7 +35,10 @@ export class PurchaseOrdersController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: Partial<CreatePurchaseOrderDto>) {
+  update(
+    @Param('id') id: string,
+    @Body() dto: Partial<CreatePurchaseOrderDto>,
+  ) {
     return this.service.update(id, dto);
   }
 

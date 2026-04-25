@@ -31,7 +31,11 @@ export class Supplier {
   @Column({ nullable: true })
   address: string;
 
-  @Column({ type: 'enum', enum: SupplierStatus, default: SupplierStatus.ACTIVE })
+  @Column({
+    type: 'enum',
+    enum: SupplierStatus,
+    default: SupplierStatus.ACTIVE,
+  })
   status: SupplierStatus;
 
   @Column({ type: 'decimal', precision: 3, scale: 2, default: 0 })

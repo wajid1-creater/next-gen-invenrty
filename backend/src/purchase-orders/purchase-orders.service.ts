@@ -1,8 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { ILike, Repository } from 'typeorm';
 import { PurchaseOrder } from './entities/purchase-order.entity';
 import { CreatePurchaseOrderDto } from './dto/create-po.dto';
+import {
+  buildPage,
+  type Page,
+  type PaginationQueryDto,
+} from '../common/dto/pagination.dto';
 
 @Injectable()
 export class PurchaseOrdersService {
@@ -14,13 +19,24 @@ export class PurchaseOrdersService {
   async create(dto: CreatePurchaseOrderDto) {
     const count = await this.repo.count();
     const orderNumber = `PO-${String(count + 1).padStart(5, '0')}`;
-    const totalAmount = dto.items.reduce((sum, i) => sum + i.quantity * i.unitPrice, 0);
+    const totalAmount = dto.items.reduce(
+      (sum, i) => sum + i.quantity * i.unitPrice,
+      0,
+    );
     const po = this.repo.create({ ...dto, orderNumber, totalAmount });
     return this.repo.save(po);
   }
 
-  findAll() {
-    return this.repo.find({ order: { createdAt: 'DESC' }, relations: ['supplier', 'deliveries'] });
+  async findAll(query: PaginationQueryDto): Promise<Page<PurchaseOrder>> {
+    const where = query.q ? { orderNumber: ILike(`%${query.q}%`) } : undefined;
+    const [items, total] = await this.repo.findAndCount({
+      where,
+      order: { createdAt: 'DESC' },
+      relations: ['supplier', 'deliveries'],
+      skip: (query.page - 1) * query.pageSize,
+      take: query.pageSize,
+    });
+    return buildPage(items, total, query);
   }
 
   async findOne(id: string) {

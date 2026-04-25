@@ -9,7 +9,15 @@ import { Delivery } from '../deliveries/entities/delivery.entity';
 import { Task } from '../tasks/entities/task.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Product, Supplier, PurchaseOrder, Delivery, Task])],
+  imports: [
+    TypeOrmModule.forFeature([
+      Product,
+      Supplier,
+      PurchaseOrder,
+      Delivery,
+      Task,
+    ]),
+  ],
   controllers: [DashboardController],
   providers: [DashboardService],
 })

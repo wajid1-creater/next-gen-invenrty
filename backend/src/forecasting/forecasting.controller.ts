@@ -12,7 +12,10 @@ export class ForecastingController {
     @Param('productId') productId: string,
     @Query('periods') periods?: string,
   ) {
-    return this.service.generateForecast(productId, periods ? parseInt(periods) : 6);
+    return this.service.generateForecast(
+      productId,
+      periods ? parseInt(periods) : 6,
+    );
   }
 
   @Get()

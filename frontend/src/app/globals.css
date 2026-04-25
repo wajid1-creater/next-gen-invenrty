@@ -1,13 +1,63 @@
-@import "tailwindcss";
+@import 'tailwindcss';
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * Design tokens.
+ *
+ * Single source of truth for the visual language. Every component reads from
+ * these instead of hard-coding colours/radii so the theme is one search-replace
+ * away. Linear/Vercel-flavoured: hairline borders, neutral surfaces, one accent.
+ * ─────────────────────────────────────────────────────────────────────────── */
 
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  /* Surfaces */
+  --background: #fafafa;
+  --surface: #ffffff;
+  --surface-muted: #f5f5f5;
+  --surface-hover: #f4f4f5;
+
+  /* Text */
+  --foreground: #09090b;
+  --muted-foreground: #71717a;
+  --subtle-foreground: #a1a1aa;
+
+  /* Borders */
+  --border: rgba(9, 9, 11, 0.08);
+  --border-strong: rgba(9, 9, 11, 0.14);
+
+  /* Brand accent — used sparingly: primary CTAs, focus rings, active nav. */
+  --accent: #059669;
+  --accent-hover: #047857;
+  --accent-soft: #ecfdf5;
+  --accent-foreground: #ffffff;
+
+  /* Semantic — only for status, never decoration. */
+  --success: #059669;
+  --success-soft: #ecfdf5;
+  --warning: #d97706;
+  --warning-soft: #fffbeb;
+  --danger: #dc2626;
+  --danger-soft: #fef2f2;
+  --info: #2563eb;
+  --info-soft: #eff6ff;
+
+  /* Radii — small and consistent. */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+
+  /* Elevation — black-only shadows, no colour tints. */
+  --shadow-sm: 0 1px 2px rgba(9, 9, 11, 0.04), 0 1px 1px rgba(9, 9, 11, 0.03);
+  --shadow-md: 0 1px 3px rgba(9, 9, 11, 0.08), 0 4px 12px rgba(9, 9, 11, 0.04);
+  --shadow-lg: 0 8px 24px rgba(9, 9, 11, 0.08), 0 2px 6px rgba(9, 9, 11, 0.05);
+  --shadow-overlay: 0 24px 48px rgba(9, 9, 11, 0.18);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -15,12 +65,24 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  font-family:
+    var(--font-sans),
+    system-ui,
+    -apple-system,
+    sans-serif;
+  font-feature-settings: 'cv11', 'ss01';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
-/* Scrollbar */
+/* Numbers in tables look amateur in proportional fonts; use tabular figures. */
+td,
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Hairline scrollbar — present but unobtrusive. */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -29,117 +91,110 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: rgba(9, 9, 11, 0.12);
   border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: rgba(9, 9, 11, 0.24);
 }
 
-/* Animations */
+/* ─── Motion — disciplined. No floating, no pulsing decorations. ──────────── */
+
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
-@keyframes fadeInScale {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
-@keyframes slideInRight {
-  from { opacity: 0; transform: translateX(12px); }
-  to { opacity: 1; transform: translateX(0); }
-}
+
 @keyframes slideDown {
-  from { opacity: 0; transform: translateY(-8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
+
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-@keyframes pulse-soft {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
-}
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.4s ease-out forwards;
+  animation: fadeIn 200ms ease-out forwards;
 }
-.animate-fade-in-scale {
-  animation: fadeInScale 0.3s ease-out forwards;
-}
-.animate-slide-in-right {
-  animation: slideInRight 0.3s ease-out forwards;
+.animate-scale-in {
+  animation: scaleIn 180ms ease-out forwards;
 }
 .animate-slide-down {
-  animation: slideDown 0.3s ease-out forwards;
+  animation: slideDown 160ms ease-out forwards;
 }
 .animate-shimmer {
-  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background: linear-gradient(
+    90deg,
+    var(--surface-muted) 0%,
+    var(--surface-hover) 50%,
+    var(--surface-muted) 100%
+  );
   background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-}
-.animate-pulse-soft {
-  animation: pulse-soft 2s ease-in-out infinite;
-}
-.animate-float {
-  animation: float 3s ease-in-out infinite;
+  animation: shimmer 1.5s ease-in-out infinite;
 }
 
-/* Staggered children animation */
-.stagger-children > * {
-  animation: fadeIn 0.4s ease-out forwards;
-  opacity: 0;
-}
-.stagger-children > *:nth-child(1) { animation-delay: 0.0s; }
-.stagger-children > *:nth-child(2) { animation-delay: 0.05s; }
-.stagger-children > *:nth-child(3) { animation-delay: 0.1s; }
-.stagger-children > *:nth-child(4) { animation-delay: 0.15s; }
-.stagger-children > *:nth-child(5) { animation-delay: 0.2s; }
-.stagger-children > *:nth-child(6) { animation-delay: 0.25s; }
-.stagger-children > *:nth-child(7) { animation-delay: 0.3s; }
-.stagger-children > *:nth-child(8) { animation-delay: 0.35s; }
-
-/* Glass effect */
-.glass {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+/* Reduced-motion users get static content — accessibility default. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
-/* Focus ring */
-input:focus, select:focus, textarea:focus {
+/* ─── Focus rings — visible but unobtrusive ───────────────────────────────── */
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-md);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.12);
 }
 
-/* Table row hover */
 tbody tr {
-  transition: background-color 0.15s ease;
+  transition: background-color 120ms ease;
 }
 
-/* Card hover lift */
-.card-hover {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.card-hover:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.08), 0 4px 10px -6px rgba(0, 0, 0, 0.04);
-}
-
-/* Button press */
-button:active:not(:disabled) {
-  transform: scale(0.98);
-}
-
-/* Gradient text */
-.gradient-text {
-  background: linear-gradient(135deg, #10b981, #059669);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+.glass {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: saturate(180%) blur(8px);
+  -webkit-backdrop-filter: saturate(180%) blur(8px);
 }

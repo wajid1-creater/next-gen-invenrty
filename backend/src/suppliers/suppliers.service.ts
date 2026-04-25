@@ -1,8 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { ILike, Repository } from 'typeorm';
 import { Supplier } from './entities/supplier.entity';
 import { CreateSupplierDto } from './dto/create-supplier.dto';
+import {
+  buildPage,
+  type Page,
+  type PaginationQueryDto,
+} from '../common/dto/pagination.dto';
 
 @Injectable()
 export class SuppliersService {
@@ -16,12 +21,25 @@ export class SuppliersService {
     return this.repo.save(supplier);
   }
 
-  findAll() {
-    return this.repo.find({ order: { createdAt: 'DESC' }, relations: ['purchaseOrders'] });
+  async findAll(query: PaginationQueryDto): Promise<Page<Supplier>> {
+    const where = query.q
+      ? [{ name: ILike(`%${query.q}%`) }, { email: ILike(`%${query.q}%`) }]
+      : undefined;
+    const [items, total] = await this.repo.findAndCount({
+      where,
+      order: { createdAt: 'DESC' },
+      relations: ['purchaseOrders'],
+      skip: (query.page - 1) * query.pageSize,
+      take: query.pageSize,
+    });
+    return buildPage(items, total, query);
   }
 
   async findOne(id: string) {
-    const supplier = await this.repo.findOne({ where: { id }, relations: ['purchaseOrders'] });
+    const supplier = await this.repo.findOne({
+      where: { id },
+      relations: ['purchaseOrders'],
+    });
     if (!supplier) throw new NotFoundException('Supplier not found');
     return supplier;
   }

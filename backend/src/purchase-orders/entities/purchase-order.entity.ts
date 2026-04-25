@@ -36,7 +36,12 @@ export class PurchaseOrder {
   supplierId: string;
 
   @Column({ type: 'jsonb', default: '[]' })
-  items: { productId: string; productName: string; quantity: number; unitPrice: number }[];
+  items: {
+    productId: string;
+    productName: string;
+    quantity: number;
+    unitPrice: number;
+  }[];
 
   @Column({ type: 'decimal', precision: 12, scale: 2, default: 0 })
   totalAmount: number;

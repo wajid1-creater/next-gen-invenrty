@@ -32,7 +32,11 @@ export class Delivery {
   @Column()
   purchaseOrderId: string;
 
-  @Column({ type: 'enum', enum: DeliveryStatus, default: DeliveryStatus.PENDING })
+  @Column({
+    type: 'enum',
+    enum: DeliveryStatus,
+    default: DeliveryStatus.PENDING,
+  })
   status: DeliveryStatus;
 
   @Column({ type: 'date', nullable: true })

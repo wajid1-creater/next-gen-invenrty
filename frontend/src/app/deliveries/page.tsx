@@ -1,31 +1,66 @@
 'use client';
 import { useEffect, useState } from 'react';
 import AuthGuard from '@/components/AuthGuard';
-import api from '@/lib/api';
-import toast, { Toaster } from 'react-hot-toast';
+import api, { getErrorMessage } from '@/lib/api';
+import { toast } from '@/lib/toast';
 import PageHeader from '@/components/PageHeader';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import Badge from '@/components/Badge';
 import EmptyState from '@/components/EmptyState';
-import { Plus, X, Truck, MapPin } from 'lucide-react';
+import { Card } from '@/components/Card';
+import Button from '@/components/Button';
+import FormField, { Input, Select } from '@/components/FormField';
+import { formatShortDate } from '@/lib/datetime';
+import type { Delivery, DeliveryStatus, Page, PurchaseOrder } from '@/lib/types';
+import { Plus, X, Truck } from 'lucide-react';
 
-const statusConfig: Record<string, { variant: any; label: string }> = {
-  pending: { variant: 'gray', label: 'Pending' },
-  in_transit: { variant: 'blue', label: 'In Transit' },
-  delivered: { variant: 'green', label: 'Delivered' },
-  delayed: { variant: 'red', label: 'Delayed' },
-  returned: { variant: 'orange', label: 'Returned' },
+type SemVariant = 'success' | 'warning' | 'danger' | 'info' | 'neutral';
+
+const STATUS_CONFIG: Record<DeliveryStatus, { variant: SemVariant; label: string }> = {
+  pending: { variant: 'neutral', label: 'Pending' },
+  in_transit: { variant: 'info', label: 'In transit' },
+  delivered: { variant: 'success', label: 'Delivered' },
+  delayed: { variant: 'danger', label: 'Delayed' },
+  returned: { variant: 'warning', label: 'Returned' },
 };
 
+interface DeliveryForm {
+  purchaseOrderId: string;
+  carrier: string;
+  estimatedArrival: string;
+  notes: string;
+}
+
+const emptyForm: DeliveryForm = {
+  purchaseOrderId: '',
+  carrier: '',
+  estimatedArrival: '',
+  notes: '',
+};
+
+interface UpdateDeliveryPayload {
+  status: DeliveryStatus;
+  actualArrival?: string;
+}
+
 export default function DeliveriesPage() {
-  const [deliveries, setDeliveries] = useState<any[]>([]);
-  const [orders, setOrders] = useState<any[]>([]);
+  const [deliveries, setDeliveries] = useState<Delivery[]>([]);
+  const [orders, setOrders] = useState<PurchaseOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ purchaseOrderId: '', carrier: '', estimatedArrival: '', notes: '' });
+  const [form, setForm] = useState<DeliveryForm>(emptyForm);
 
-  const load = () => api.get('/deliveries').then((r) => { setDeliveries(r.data); setLoading(false); });
-  useEffect(() => { load(); api.get('/purchase-orders').then((r) => setOrders(r.data)); }, []);
+  const load = () =>
+    api.get<Delivery[]>('/deliveries').then((r) => {
+      setDeliveries(r.data);
+      setLoading(false);
+    });
+  useEffect(() => {
+    load();
+    api
+      .get<Page<PurchaseOrder>>('/purchase-orders', { params: { pageSize: 100 } })
+      .then((r) => setOrders(r.data.items));
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,20 +68,27 @@ export default function DeliveriesPage() {
       await api.post('/deliveries', form);
       toast.success('Delivery created');
       setShowForm(false);
-      setForm({ purchaseOrderId: '', carrier: '', estimatedArrival: '', notes: '' });
+      setForm(emptyForm);
       load();
-    } catch (err: any) { toast.error(err.response?.data?.message || 'Error'); }
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    }
   };
 
-  const updateStatus = async (id: string, status: string) => {
-    const data: any = { status };
+  const updateStatus = async (id: string, status: DeliveryStatus) => {
+    const data: UpdateDeliveryPayload = { status };
     if (status === 'delivered') data.actualArrival = new Date().toISOString().split('T')[0];
     await api.patch(`/deliveries/${id}`, data);
-    toast.success('Updated');
+    toast.success('Delivery updated');
     load();
   };
 
-  if (loading) return <AuthGuard><LoadingSpinner /></AuthGuard>;
+  if (loading)
+    return (
+      <AuthGuard>
+        <LoadingSpinner />
+      </AuthGuard>
+    );
 
   const delayed = deliveries.filter((d) => d.status === 'delayed').length;
   const delivered = deliveries.filter((d) => d.status === 'delivered').length;
@@ -54,96 +96,167 @@ export default function DeliveriesPage() {
 
   return (
     <AuthGuard>
-      <Toaster position="top-center" />
-      <div className="space-y-4">
+      <div className="space-y-5">
         <PageHeader
-          title="Delivery Tracking"
-          subtitle={`${deliveries.length} deliveries | ${delayed} delayed | ${onTimeRate}% delivered`}
+          title="Deliveries"
+          subtitle={`${deliveries.length} total · ${delayed} delayed · ${onTimeRate}% delivered`}
           action={
-            <button onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-5 py-2.5 rounded-xl hover:from-green-700 hover:to-emerald-700 font-medium text-sm shadow-lg shadow-green-500/20">
-              <Plus size={16} /> New Delivery
-            </button>
+            <Button
+              variant="primary"
+              size="md"
+              leadingIcon={<Plus size={14} />}
+              onClick={() => setShowForm(true)}
+            >
+              New delivery
+            </Button>
           }
         />
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {Object.entries(statusConfig).map(([key, cfg]) => {
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-2.5">
+          {(
+            Object.entries(STATUS_CONFIG) as [
+              DeliveryStatus,
+              { variant: SemVariant; label: string },
+            ][]
+          ).map(([key, cfg]) => {
             const count = deliveries.filter((d) => d.status === key).length;
             return (
-              <div key={key} className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
-                <p className="text-2xl font-bold text-gray-900">{count}</p>
-                <p className="text-xs text-gray-500 mt-0.5 capitalize">{cfg.label}</p>
-              </div>
+              <Card key={key} className="!p-3 flex flex-col gap-1">
+                <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-medium">
+                  {cfg.label}
+                </p>
+                <p className="text-xl font-semibold text-zinc-900 tabular-nums">{count}</p>
+              </Card>
             );
           })}
         </div>
 
         {showForm && (
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            <div className="flex justify-between items-center mb-5">
-              <h3 className="font-semibold text-gray-900">New Delivery</h3>
-              <button onClick={() => setShowForm(false)} className="p-1.5 hover:bg-gray-100 rounded-lg"><X size={18} className="text-gray-500" /></button>
+          <Card className="animate-fade-in">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-sm font-semibold text-zinc-900">New delivery</h3>
+              <button
+                onClick={() => setShowForm(false)}
+                className="p-1.5 hover:bg-zinc-100 rounded-md"
+                aria-label="Close"
+              >
+                <X size={15} className="text-zinc-500" />
+              </button>
             </div>
             <form onSubmit={handleSubmit} className="grid md:grid-cols-2 gap-4">
-              <div><label className="block text-xs font-medium text-gray-500 mb-1">Purchase Order *</label>
-                <select value={form.purchaseOrderId} onChange={(e) => setForm({ ...form, purchaseOrderId: e.target.value })} required className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none">
-                  <option value="">Select Order</option>{orders.map((o) => <option key={o.id} value={o.id}>{o.orderNumber} - {o.supplier?.name}</option>)}
-                </select>
-              </div>
-              <div><label className="block text-xs font-medium text-gray-500 mb-1">Carrier</label><input value={form.carrier} onChange={(e) => setForm({ ...form, carrier: e.target.value })} placeholder="DHL, FedEx, etc." className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none" /></div>
-              <div><label className="block text-xs font-medium text-gray-500 mb-1">Estimated Arrival</label><input type="date" value={form.estimatedArrival} onChange={(e) => setForm({ ...form, estimatedArrival: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none" /></div>
-              <div><label className="block text-xs font-medium text-gray-500 mb-1">Notes</label><input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none" /></div>
-              <div className="md:col-span-2 flex gap-3">
-                <button type="submit" className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-2.5 rounded-xl font-medium text-sm shadow-lg shadow-green-500/20">Create Delivery</button>
-                <button type="button" onClick={() => setShowForm(false)} className="px-6 py-2.5 rounded-xl font-medium text-sm border border-gray-200 text-gray-600 hover:bg-gray-50">Cancel</button>
+              <FormField label="Purchase order" required>
+                <Select
+                  value={form.purchaseOrderId}
+                  onChange={(e) => setForm({ ...form, purchaseOrderId: e.target.value })}
+                  required
+                >
+                  <option value="">Select order…</option>
+                  {orders.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.orderNumber} — {o.supplier?.name}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+              <FormField label="Carrier">
+                <Input
+                  value={form.carrier}
+                  onChange={(e) => setForm({ ...form, carrier: e.target.value })}
+                  placeholder="DHL, FedEx, UPS…"
+                />
+              </FormField>
+              <FormField label="Estimated arrival">
+                <Input
+                  type="date"
+                  value={form.estimatedArrival}
+                  onChange={(e) => setForm({ ...form, estimatedArrival: e.target.value })}
+                />
+              </FormField>
+              <FormField label="Notes">
+                <Input
+                  value={form.notes}
+                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                />
+              </FormField>
+              <div className="md:col-span-2 flex items-center gap-2">
+                <Button type="submit" variant="primary">
+                  Create delivery
+                </Button>
+                <Button type="button" variant="ghost" onClick={() => setShowForm(false)}>
+                  Cancel
+                </Button>
               </div>
             </form>
-          </div>
+          </Card>
         )}
 
         {deliveries.length === 0 ? (
-          <div className="bg-white rounded-2xl shadow-sm border"><EmptyState icon={Truck} title="No deliveries yet" /></div>
+          <EmptyState
+            variant="card"
+            icon={Truck}
+            title="No deliveries yet"
+            description="Track shipments tied to your purchase orders."
+          />
         ) : (
-          <div className="space-y-3">
-            {deliveries.map((d) => (
-              <div key={d.id} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between flex-wrap gap-3">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${d.status === 'delivered' ? 'bg-green-50' : d.status === 'delayed' ? 'bg-red-50' : d.status === 'in_transit' ? 'bg-blue-50' : 'bg-gray-50'}`}>
-                      <Truck size={20} className={d.status === 'delivered' ? 'text-green-600' : d.status === 'delayed' ? 'text-red-500' : d.status === 'in_transit' ? 'text-blue-600' : 'text-gray-400'} />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-mono text-sm font-semibold text-gray-900">{d.trackingNumber}</p>
-                        <Badge variant={statusConfig[d.status]?.variant || 'gray'} dot>{statusConfig[d.status]?.label || d.status}</Badge>
+          <Card padded={false}>
+            <div className="divide-y divide-zinc-100">
+              {deliveries.map((d) => {
+                const cfg = STATUS_CONFIG[d.status] || STATUS_CONFIG.pending;
+                return (
+                  <div key={d.id} className="flex items-center gap-4 px-5 py-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2.5">
+                        <p className="font-mono text-[13px] font-semibold text-zinc-900">
+                          {d.trackingNumber}
+                        </p>
+                        <Badge variant={cfg.variant} dot>
+                          {cfg.label}
+                        </Badge>
                       </div>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        {d.purchaseOrder?.orderNumber} | {d.purchaseOrder?.supplier?.name} {d.carrier ? `| ${d.carrier}` : ''}
+                      <p className="text-[12px] text-zinc-500 mt-0.5 truncate">
+                        {d.purchaseOrder?.orderNumber} · {d.purchaseOrder?.supplier?.name}
+                        {d.carrier ? ` · ${d.carrier}` : ''}
+                      </p>
+                      {d.notes && (
+                        <p className="text-[12px] text-zinc-500 mt-1.5 bg-zinc-50 border border-zinc-200/70 px-2 py-1 rounded inline-block">
+                          {d.notes}
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-right shrink-0 hidden sm:block">
+                      <p className="text-[10px] uppercase tracking-wider text-zinc-400 font-medium">
+                        Expected
+                      </p>
+                      <p className="text-[12px] font-medium text-zinc-900 tabular-nums">
+                        {d.estimatedArrival ? formatShortDate(d.estimatedArrival) : '—'}
                       </p>
                     </div>
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <p className="text-xs text-gray-400">Expected</p>
-                      <p className="text-sm font-medium">{d.estimatedArrival?.split('T')[0] || '-'}</p>
-                    </div>
                     {d.actualArrival && (
-                      <div className="text-right">
-                        <p className="text-xs text-gray-400">Delivered</p>
-                        <p className="text-sm font-medium text-green-600">{d.actualArrival?.split('T')[0]}</p>
+                      <div className="text-right shrink-0 hidden sm:block">
+                        <p className="text-[10px] uppercase tracking-wider text-zinc-400 font-medium">
+                          Delivered
+                        </p>
+                        <p className="text-[12px] font-medium text-emerald-700 tabular-nums">
+                          {formatShortDate(d.actualArrival)}
+                        </p>
                       </div>
                     )}
-                    <select value={d.status} onChange={(e) => updateStatus(d.id, e.target.value)} className="text-xs border border-gray-200 rounded-xl px-3 py-2 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500">
-                      {Object.entries(statusConfig).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-                    </select>
+                    <Select
+                      value={d.status}
+                      onChange={(e) => updateStatus(d.id, e.target.value as DeliveryStatus)}
+                      className="!w-32 !text-[12px]"
+                    >
+                      {Object.entries(STATUS_CONFIG).map(([k, v]) => (
+                        <option key={k} value={k}>
+                          {v.label}
+                        </option>
+                      ))}
+                    </Select>
                   </div>
-                </div>
-                {d.notes && <p className="text-xs text-gray-500 mt-3 bg-gray-50 p-2 rounded-lg">{d.notes}</p>}
-              </div>
-            ))}
-          </div>
+                );
+              })}
+            </div>
+          </Card>
         )}
       </div>
     </AuthGuard>

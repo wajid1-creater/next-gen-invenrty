@@ -1,8 +1,15 @@
 node_modules/
 dist/
+build/
 .next/
+coverage/
+
+# Env files — never commit real secrets
 .env
-.env.local
+.env.*
+!.env.example
+
 *.log
 .DS_Store
-coverage/
+.idea/
+.vscode/

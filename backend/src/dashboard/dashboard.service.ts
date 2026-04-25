@@ -69,7 +69,9 @@ export class DashboardService {
       pendingOrders,
       delayedDeliveries,
       completedTasks,
-      taskCompletionRate: totalTasks ? Math.round((completedTasks / totalTasks) * 100) : 0,
+      taskCompletionRate: totalTasks
+        ? Math.round((completedTasks / totalTasks) * 100)
+        : 0,
       totalOrderValue: parseFloat(totalOrderValue.total),
       avgEsgScore: parseFloat(parseFloat(avgEsgScore.avg).toFixed(2)),
     };

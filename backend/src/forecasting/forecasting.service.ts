@@ -16,7 +16,9 @@ export class ForecastingService {
    * For a production system you'd use a Python microservice with statsmodels.
    */
   async generateForecast(productId: string, periods: number = 6) {
-    const product = await this.productRepo.findOne({ where: { id: productId } });
+    const product = await this.productRepo.findOne({
+      where: { id: productId },
+    });
     if (!product) throw new Error('Product not found');
 
     // Get historical forecasts as proxy for demand history
@@ -33,10 +35,22 @@ export class ForecastingService {
       forecastDate.setMonth(forecastDate.getMonth() + i);
 
       // Simple moving average with seasonal adjustment
-      const baseDemand = product.currentStock > 0 ? Math.ceil(product.currentStock * 0.3) : 50;
-      const trend = history.length > 1 ? (history[history.length - 1]?.predictedDemand - history[0]?.predictedDemand) / history.length : 0;
-      const seasonal = Math.sin((forecastDate.getMonth() / 12) * Math.PI * 2) * baseDemand * 0.15;
-      const predicted = Math.max(1, Math.round(baseDemand + trend * i + seasonal));
+      const baseDemand =
+        product.currentStock > 0 ? Math.ceil(product.currentStock * 0.3) : 50;
+      const trend =
+        history.length > 1
+          ? (history[history.length - 1]?.predictedDemand -
+              history[0]?.predictedDemand) /
+            history.length
+          : 0;
+      const seasonal =
+        Math.sin((forecastDate.getMonth() / 12) * Math.PI * 2) *
+        baseDemand *
+        0.15;
+      const predicted = Math.max(
+        1,
+        Math.round(baseDemand + trend * i + seasonal),
+      );
       const confidence = Math.max(50, 95 - i * 5);
 
       const forecast = this.forecastRepo.create({
@@ -78,14 +92,22 @@ export class ForecastingService {
         take: 3,
       });
 
-      const totalPredicted = forecasts.reduce((s, f) => s + f.predictedDemand, 0);
+      const totalPredicted = forecasts.reduce(
+        (s, f) => s + f.predictedDemand,
+        0,
+      );
       if (totalPredicted > product.currentStock) {
         alerts.push({
           product,
           currentStock: product.currentStock,
           predictedDemand3Months: totalPredicted,
           shortageAmount: totalPredicted - product.currentStock,
-          severity: product.currentStock === 0 ? 'critical' : product.currentStock < product.reorderLevel ? 'high' : 'medium',
+          severity:
+            product.currentStock === 0
+              ? 'critical'
+              : product.currentStock < product.reorderLevel
+                ? 'high'
+                : 'medium',
         });
       }
     }

@@ -1,4 +1,12 @@
-import { IsEmail, IsEnum, IsNotEmpty, IsOptional, IsNumber, Min, Max } from 'class-validator';
+import {
+  IsEmail,
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsNumber,
+  Min,
+  Max,
+} from 'class-validator';
 import { SupplierStatus } from '../entities/supplier.entity';
 
 export class CreateSupplierDto {

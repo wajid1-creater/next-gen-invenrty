@@ -25,7 +25,9 @@ export class BomItem {
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   unitCost: number;
 
-  @ManyToOne(() => Product, (product) => product.bomItems, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Product, (product) => product.bomItems, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'productId' })
   product: Product;
 
