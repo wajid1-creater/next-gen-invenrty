@@ -7,8 +7,7 @@ import { useAuthStore } from '@/lib/store';
 import { registerSchema, formatZodErrors } from '@/lib/schemas';
 import type { AuthResponse, UserRole } from '@/lib/types';
 import { toast } from '@/lib/toast';
-import Button from '@/components/Button';
-import { Box, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { Box, ArrowRight, Eye, EyeOff, Loader2 } from 'lucide-react';
 
 const ROLES: { value: UserRole; label: string }[] = [
   { value: 'admin', label: 'Admin' },
@@ -50,145 +49,220 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 flex items-center justify-center p-6">
-      <div
-        aria-hidden
-        className="fixed inset-0 -z-10 [background:radial-gradient(circle_at_50%_-20%,rgba(5,150,105,0.06),transparent_50%),linear-gradient(to_right,rgba(9,9,11,0.025)_1px,transparent_1px),linear-gradient(to_bottom,rgba(9,9,11,0.025)_1px,transparent_1px)] [background-size:auto,32px_32px,32px_32px]"
-      />
+    <div className="min-h-screen grid lg:grid-cols-2 bg-white font-[family-name:var(--font-geist-sans)]">
+      <aside className="hidden lg:flex flex-col justify-between bg-emerald-700 text-white p-14 relative overflow-hidden">
+        <div className="absolute -bottom-32 -left-32 w-[520px] h-[520px] rounded-full bg-emerald-500/35 blur-3xl pointer-events-none animate-halo-drift" />
 
-      <div className="w-full max-w-[400px]">
-        <div className="flex items-center gap-2.5 mb-10">
-          <div className="w-8 h-8 bg-zinc-950 rounded-md flex items-center justify-center">
-            <Box size={16} strokeWidth={2.4} className="text-white" />
+        <div
+          className="relative flex items-center gap-2.5 reveal"
+          style={{ animationDelay: '0ms' }}
+        >
+          <div className="w-9 h-9 bg-white rounded-lg flex items-center justify-center">
+            <Box size={18} strokeWidth={2.4} className="text-emerald-700" />
           </div>
-          <span className="text-base font-semibold text-zinc-900 tracking-tight">NGIM</span>
+          <span className="text-base font-semibold tracking-tight">NGIM</span>
         </div>
 
-        <h1 className="text-[26px] font-semibold text-zinc-900 tracking-tight leading-tight">
-          Create your account
-        </h1>
-        <p className="text-[14px] text-zinc-500 mt-1.5">
-          Get started with the inventory management console.
-        </p>
+        <h2
+          className="relative max-w-[420px] text-[64px] leading-[0.95] font-semibold tracking-[-0.035em] reveal"
+          style={{ animationDelay: '160ms' }}
+        >
+          Inventory,{' '}
+          <span className="font-[family-name:var(--font-display-serif)] italic font-normal text-emerald-200">
+            reimagined
+          </span>{' '}
+          for your team.
+        </h2>
 
-        <form onSubmit={handleSubmit} className="mt-8 space-y-4">
-          <div>
-            <label htmlFor="name" className="block text-[12px] font-medium text-zinc-700 mb-1.5">
-              Full name
-            </label>
-            <input
-              id="name"
-              type="text"
-              autoComplete="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              aria-invalid={!!fieldErrors.name}
-              className="w-full h-10 px-3 bg-white border border-zinc-200 rounded-md text-[14px] text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-emerald-500"
-              placeholder="Jane Doe"
-            />
-            {fieldErrors.name && (
-              <p className="mt-1.5 text-[12px] text-red-600">{fieldErrors.name}</p>
-            )}
+        <span className="hidden" />
+      </aside>
+
+      <main className="flex items-center justify-center p-6 sm:p-12">
+        <div className="w-full max-w-[380px]">
+          <div
+            className="lg:hidden flex items-center gap-2.5 mb-12 reveal"
+            style={{ animationDelay: '0ms' }}
+          >
+            <div className="w-9 h-9 bg-emerald-700 rounded-lg flex items-center justify-center">
+              <Box size={18} strokeWidth={2.4} className="text-white" />
+            </div>
+            <span className="text-base font-semibold text-zinc-900 tracking-tight">NGIM</span>
           </div>
 
-          <div>
-            <label htmlFor="email" className="block text-[12px] font-medium text-zinc-700 mb-1.5">
-              Work email
-            </label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              aria-invalid={!!fieldErrors.email}
-              className="w-full h-10 px-3 bg-white border border-zinc-200 rounded-md text-[14px] text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-emerald-500"
-              placeholder="you@company.com"
-            />
-            {fieldErrors.email && (
-              <p className="mt-1.5 text-[12px] text-red-600">{fieldErrors.email}</p>
-            )}
-          </div>
+          <h1
+            className="text-[40px] leading-[1.05] font-semibold text-zinc-900 tracking-[-0.03em] reveal"
+            style={{ animationDelay: '80ms' }}
+          >
+            Create your{' '}
+            <span className="font-[family-name:var(--font-display-serif)] italic font-normal text-emerald-700">
+              account
+            </span>
+          </h1>
+          <p className="text-[15px] text-zinc-500 mt-2 reveal" style={{ animationDelay: '180ms' }}>
+            Get started in under a minute.
+          </p>
 
-          <div>
-            <label
-              htmlFor="password"
-              className="block text-[12px] font-medium text-zinc-700 mb-1.5"
-            >
-              Password
-            </label>
-            <div className="relative">
+          <form onSubmit={handleSubmit} className="mt-9 space-y-4">
+            <div className="reveal" style={{ animationDelay: '260ms' }}>
+              <FieldLabel htmlFor="name">Full name</FieldLabel>
               <input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                autoComplete="new-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                aria-invalid={!!fieldErrors.password}
-                className="w-full h-10 pl-3 pr-10 bg-white border border-zinc-200 rounded-md text-[14px] text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-emerald-500"
-                placeholder="Min. 8 chars, a letter and a number"
+                id="name"
+                type="text"
+                autoComplete="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Jane Doe"
+                className="w-full h-11 px-3.5 bg-white border border-zinc-200 rounded-lg text-[14px] text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15 transition"
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-zinc-400 hover:text-zinc-700 rounded"
-                tabIndex={-1}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-              >
-                {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-              </button>
+              {fieldErrors.name && <FieldError>{fieldErrors.name}</FieldError>}
             </div>
-            {fieldErrors.password && (
-              <p className="mt-1.5 text-[12px] text-red-600">{fieldErrors.password}</p>
-            )}
-          </div>
 
-          <div>
-            <label className="block text-[12px] font-medium text-zinc-700 mb-1.5">Role</label>
-            <div className="grid grid-cols-3 gap-1.5">
-              {ROLES.map((r) => {
-                const active = role === r.value;
-                return (
-                  <button
-                    key={r.value}
-                    type="button"
-                    onClick={() => setRole(r.value)}
-                    className={`h-9 rounded-md text-[13px] font-medium border transition-colors ${
-                      active
-                        ? 'bg-zinc-900 border-zinc-900 text-white'
-                        : 'bg-white border-zinc-200 text-zinc-700 hover:border-zinc-300'
-                    }`}
-                  >
-                    {r.label}
-                  </button>
-                );
-              })}
+            <div className="reveal" style={{ animationDelay: '340ms' }}>
+              <FieldLabel htmlFor="email">Email</FieldLabel>
+              <input
+                id="email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@company.com"
+                className="w-full h-11 px-3.5 bg-white border border-zinc-200 rounded-lg text-[14px] text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15 transition"
+              />
+              {fieldErrors.email && <FieldError>{fieldErrors.email}</FieldError>}
             </div>
-          </div>
 
-          <Button
-            type="submit"
-            variant="primary"
-            size="lg"
-            loading={loading}
-            fullWidth
-            trailingIcon={!loading && <ArrowRight size={14} />}
-            className="!mt-6"
-          >
-            Create account
-          </Button>
-        </form>
+            <div className="reveal" style={{ animationDelay: '420ms' }}>
+              <FieldLabel htmlFor="password">Password</FieldLabel>
+              <div className="relative">
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Min. 8 chars, a letter and a number"
+                  className="w-full h-11 pl-3.5 pr-11 bg-white border border-zinc-200 rounded-lg text-[14px] text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15 transition"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-zinc-400 hover:text-zinc-700 rounded transition-colors"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
+              {fieldErrors.password && <FieldError>{fieldErrors.password}</FieldError>}
+            </div>
 
-        <p className="text-center text-[13px] text-zinc-500 mt-6">
-          Already have an account?{' '}
-          <Link
-            href="/login"
-            className="text-zinc-900 font-medium hover:text-emerald-700 underline-offset-4 hover:underline"
-          >
-            Sign in
-          </Link>
-        </p>
-      </div>
+            <div className="reveal" style={{ animationDelay: '500ms' }}>
+              <FieldLabel htmlFor="role">Role</FieldLabel>
+              <div className="grid grid-cols-3 gap-1.5">
+                {ROLES.map((r) => {
+                  const active = role === r.value;
+                  return (
+                    <button
+                      key={r.value}
+                      type="button"
+                      onClick={() => setRole(r.value)}
+                      className={`h-10 rounded-lg text-[13px] font-medium border transition-all duration-200 active:scale-[0.97] ${
+                        active
+                          ? 'bg-emerald-700 border-emerald-700 text-white'
+                          : 'bg-white border-zinc-200 text-zinc-700 hover:border-zinc-300'
+                      }`}
+                    >
+                      {r.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="reveal group w-full h-11 mt-3 rounded-lg bg-zinc-950 text-white text-[14px] font-medium hover:bg-zinc-800 active:bg-black transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              style={{ animationDelay: '580ms' }}
+            >
+              {loading ? (
+                <>
+                  <Loader2 size={15} className="animate-spin" /> Creating account…
+                </>
+              ) : (
+                <>
+                  Create account
+                  <ArrowRight
+                    size={14}
+                    className="group-hover:translate-x-0.5 transition-transform"
+                  />
+                </>
+              )}
+            </button>
+          </form>
+
+          <p className="text-[13px] text-zinc-500 mt-8 reveal" style={{ animationDelay: '660ms' }}>
+            Already have an account?{' '}
+            <Link
+              href="/login"
+              className="text-emerald-700 font-medium hover:text-emerald-800 underline-offset-4 hover:underline"
+            >
+              Sign in
+            </Link>
+          </p>
+        </div>
+      </main>
+
+      <style jsx global>{`
+        @keyframes reveal {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .reveal {
+          opacity: 0;
+          animation: reveal 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        @keyframes haloDrift {
+          0%,
+          100% {
+            transform: translate(0, 0);
+          }
+          50% {
+            transform: translate(-30px, 28px);
+          }
+        }
+        .animate-halo-drift {
+          animation: haloDrift 18s ease-in-out infinite;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .reveal,
+          .animate-halo-drift {
+            animation: none !important;
+            opacity: 1 !important;
+            transform: none !important;
+          }
+        }
+      `}</style>
     </div>
   );
+}
+
+function FieldLabel({ htmlFor, children }: { htmlFor: string; children: React.ReactNode }) {
+  return (
+    <label htmlFor={htmlFor} className="block text-[12px] font-medium text-zinc-700 mb-1.5">
+      {children}
+    </label>
+  );
+}
+
+function FieldError({ children }: { children: React.ReactNode }) {
+  return <p className="mt-1.5 text-[12px] text-red-600">{children}</p>;
 }
