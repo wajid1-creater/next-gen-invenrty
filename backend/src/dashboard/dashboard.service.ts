@@ -107,7 +107,7 @@ export class DashboardService {
       .groupBy('s.id')
       .addGroupBy('s.name')
       .addGroupBy('s.esgScore')
-      .orderBy('totalValue', 'DESC')
+      .orderBy('COALESCE(SUM(po.totalAmount), 0)', 'DESC')
       .limit(10)
       .getRawMany();
   }

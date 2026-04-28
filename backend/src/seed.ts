@@ -19,6 +19,33 @@ import {
 } from './notifications/entities/notification.entity';
 import { Forecast } from './forecasting/entities/forecast.entity';
 
+/** Set createdAt to a backdated value via raw SQL — TypeORM blocks updates on @CreateDateColumn. */
+async function setCreatedAt(
+  ds: DataSource,
+  table: string,
+  id: string,
+  date: Date,
+): Promise<void> {
+  await ds.query(`UPDATE "${table}" SET "createdAt" = $1 WHERE id = $2`, [
+    date,
+    id,
+  ]);
+}
+
+/** Pick from a list. */
+function pick<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+/** Date n months ago from now, with optional day offset. */
+function monthsAgo(n: number, dayOffset = 0): Date {
+  const d = new Date();
+  d.setMonth(d.getMonth() - n);
+  d.setDate(Math.max(1, Math.min(28, 5 + dayOffset)));
+  d.setHours(10, 0, 0, 0);
+  return d;
+}
+
 async function seed() {
   const ds = new DataSource({
     type: 'postgres',
@@ -44,7 +71,26 @@ async function seed() {
   await ds.initialize();
   console.log('Connected to database');
 
-  // Users
+  // Idempotent: wipe all domain rows so re-running the seed doesn't blow up on
+  // unique constraints. CASCADE catches audit_logs / refresh_tokens too.
+  await ds.query(`
+    TRUNCATE TABLE
+      forecasts,
+      notifications,
+      tasks,
+      deliveries,
+      purchase_orders,
+      bom_items,
+      products,
+      suppliers,
+      audit_logs,
+      refresh_tokens,
+      users
+    RESTART IDENTITY CASCADE
+  `);
+  console.log('Cleared existing data');
+
+  /* ─────────── Users ─────────── */
   const userRepo = ds.getRepository(User);
   const hashedPw = await bcrypt.hash('password123', 10);
 
@@ -52,6 +98,14 @@ async function seed() {
     userRepo.create({
       name: 'Faizan Akram',
       email: 'admin@ngim.com',
+      password: hashedPw,
+      role: UserRole.ADMIN,
+    }),
+  );
+  const adminTwo = await userRepo.save(
+    userRepo.create({
+      name: 'Sara Khan',
+      email: 'sara.admin@ngim.com',
       password: hashedPw,
       role: UserRole.ADMIN,
     }),
@@ -64,6 +118,41 @@ async function seed() {
       role: UserRole.MANAGER,
     }),
   );
+  const managers = [
+    manager,
+    await userRepo.save(
+      userRepo.create({
+        name: 'Ayesha Malik',
+        email: 'ayesha.manager@ngim.com',
+        password: hashedPw,
+        role: UserRole.MANAGER,
+      }),
+    ),
+    await userRepo.save(
+      userRepo.create({
+        name: 'Bilal Hussain',
+        email: 'bilal.manager@ngim.com',
+        password: hashedPw,
+        role: UserRole.MANAGER,
+      }),
+    ),
+    await userRepo.save(
+      userRepo.create({
+        name: 'Hina Raza',
+        email: 'hina.manager@ngim.com',
+        password: hashedPw,
+        role: UserRole.MANAGER,
+      }),
+    ),
+    await userRepo.save(
+      userRepo.create({
+        name: 'Imran Yousaf',
+        email: 'imran.manager@ngim.com',
+        password: hashedPw,
+        role: UserRole.MANAGER,
+      }),
+    ),
+  ];
   const supplierUser = await userRepo.save(
     userRepo.create({
       name: 'Ali Supplier',
@@ -72,9 +161,23 @@ async function seed() {
       role: UserRole.SUPPLIER,
     }),
   );
-  console.log('Users seeded');
+  await userRepo.save([
+    userRepo.create({
+      name: 'Zara Iqbal',
+      email: 'zara.supplier@ngim.com',
+      password: hashedPw,
+      role: UserRole.SUPPLIER,
+    }),
+    userRepo.create({
+      name: 'Omar Farooq',
+      email: 'omar.supplier@ngim.com',
+      password: hashedPw,
+      role: UserRole.SUPPLIER,
+    }),
+  ]);
+  console.log('Users seeded (8 total)');
 
-  // Suppliers
+  /* ─────────── Suppliers ─────────── */
   const supplierRepo = ds.getRepository(Supplier);
   const suppliers = await supplierRepo.save([
     supplierRepo.create({
@@ -111,7 +214,7 @@ async function seed() {
       address: 'Islamabad, Pakistan',
       esgScore: 3.1,
       certifications: 'ISO 9001',
-      status: SupplierStatus.INACTIVE,
+      status: SupplierStatus.ACTIVE,
     }),
     supplierRepo.create({
       name: 'FastLogistics Hub',
@@ -122,10 +225,55 @@ async function seed() {
       certifications: 'None',
       status: SupplierStatus.SUSPENDED,
     }),
+    supplierRepo.create({
+      name: 'EcoSteel Works',
+      email: 'sales@ecosteel.com',
+      phone: '+92-301-1112222',
+      address: 'Sialkot, Pakistan',
+      esgScore: 4.0,
+      certifications: 'ISO 14001',
+      status: SupplierStatus.ACTIVE,
+    }),
+    supplierRepo.create({
+      name: 'Premier Plastics',
+      email: 'team@premier-plastics.com',
+      phone: '+92-322-7778888',
+      address: 'Gujranwala, Pakistan',
+      esgScore: 2.2,
+      certifications: 'ISO 9001',
+      status: SupplierStatus.ACTIVE,
+    }),
+    supplierRepo.create({
+      name: 'Solaris Energy',
+      email: 'hello@solaris-energy.com',
+      phone: '+92-313-3334444',
+      address: 'Rawalpindi, Pakistan',
+      esgScore: 4.6,
+      certifications: 'ISO 14001, B Corp',
+      status: SupplierStatus.ACTIVE,
+    }),
+    supplierRepo.create({
+      name: 'BluePrint Components',
+      email: 'orders@blueprint-co.com',
+      phone: '+92-302-5556666',
+      address: 'Peshawar, Pakistan',
+      esgScore: 3.4,
+      certifications: 'ISO 9001, ISO 14001',
+      status: SupplierStatus.ACTIVE,
+    }),
+    supplierRepo.create({
+      name: 'AgriHarvest Co-op',
+      email: 'farms@agriharvest.com',
+      phone: '+92-300-9990000',
+      address: 'Quetta, Pakistan',
+      esgScore: 4.4,
+      certifications: 'Fair Trade, Organic',
+      status: SupplierStatus.INACTIVE,
+    }),
   ]);
-  console.log('Suppliers seeded');
+  console.log('Suppliers seeded (10 total)');
 
-  // Products
+  /* ─────────── Products ─────────── */
   const productRepo = ds.getRepository(Product);
   const products = await productRepo.save([
     productRepo.create({
@@ -200,10 +348,118 @@ async function seed() {
       reorderLevel: 20,
       unit: 'pcs',
     }),
+    productRepo.create({
+      name: 'Recycled Paper Roll',
+      sku: 'RPR-009',
+      category: 'Packaging',
+      unitPrice: 4.5,
+      currentStock: 120,
+      reorderLevel: 60,
+      unit: 'rolls',
+    }),
+    productRepo.create({
+      name: 'Aluminium Sheet 2mm',
+      sku: 'AS2-010',
+      category: 'Hardware',
+      unitPrice: 18.0,
+      currentStock: 75,
+      reorderLevel: 30,
+      unit: 'sheets',
+    }),
+    productRepo.create({
+      name: 'Microcontroller Board',
+      sku: 'MCB-011',
+      category: 'Electronics',
+      unitPrice: 22.5,
+      currentStock: 12,
+      reorderLevel: 40,
+      unit: 'pcs',
+    }),
+    productRepo.create({
+      name: 'Solar Inverter 5kW',
+      sku: 'SI5-012',
+      category: 'Energy',
+      unitPrice: 480.0,
+      currentStock: 18,
+      reorderLevel: 8,
+      unit: 'pcs',
+    }),
+    productRepo.create({
+      name: 'Hemp Twine Roll',
+      sku: 'HTR-013',
+      category: 'Textiles',
+      unitPrice: 6.75,
+      currentStock: 200,
+      reorderLevel: 80,
+      unit: 'rolls',
+    }),
+    productRepo.create({
+      name: 'Glass Jar 500ml',
+      sku: 'GJ5-014',
+      category: 'F&B',
+      unitPrice: 1.2,
+      currentStock: 800,
+      reorderLevel: 300,
+      unit: 'pcs',
+    }),
+    productRepo.create({
+      name: 'Power Cable 14AWG',
+      sku: 'PC14-015',
+      category: 'Electronics',
+      unitPrice: 2.1,
+      currentStock: 9,
+      reorderLevel: 100,
+      unit: 'meters',
+    }),
+    productRepo.create({
+      name: 'Compostable Cup 12oz',
+      sku: 'CC12-016',
+      category: 'Packaging',
+      unitPrice: 0.32,
+      currentStock: 4500,
+      reorderLevel: 1000,
+      unit: 'pcs',
+    }),
+    productRepo.create({
+      name: 'Industrial Bearing 6204',
+      sku: 'IB-017',
+      category: 'Hardware',
+      unitPrice: 4.8,
+      currentStock: 60,
+      reorderLevel: 25,
+      unit: 'pcs',
+    }),
+    productRepo.create({
+      name: 'Wool Blend Yarn 100g',
+      sku: 'WBY-018',
+      category: 'Textiles',
+      unitPrice: 9.4,
+      currentStock: 220,
+      reorderLevel: 50,
+      unit: 'skeins',
+    }),
+    productRepo.create({
+      name: 'Wind Turbine Blade Mini',
+      sku: 'WTB-019',
+      category: 'Energy',
+      unitPrice: 95.0,
+      currentStock: 14,
+      reorderLevel: 6,
+      unit: 'pcs',
+    }),
+    productRepo.create({
+      name: 'Sealed Bearing Kit',
+      sku: 'SBK-020',
+      category: 'Hardware',
+      unitPrice: 14.5,
+      currentStock: 28,
+      reorderLevel: 30,
+      unit: 'kits',
+    }),
   ]);
-  console.log('Products seeded');
+  console.log('Products seeded (20 total)');
 
-  // BoM Items
+  /* ─────────── BoM Items ─────────── */
   const bomRepo = ds.getRepository(BomItem);
   await bomRepo.save([
     bomRepo.create({
@@ -238,133 +494,178 @@ async function seed() {
       productId: products[2].id,
       supplierId: suppliers[2].id,
     }),
+    bomRepo.create({
+      materialName: 'Photovoltaic Cell',
+      quantity: 36,
+      unit: 'pcs',
+      unitCost: 4.2,
+      productId: products[7].id,
+      supplierId: suppliers[7].id,
+    }),
+    bomRepo.create({
+      materialName: 'Aluminium Frame',
+      quantity: 1,
+      unit: 'pcs',
+      unitCost: 22.0,
+      productId: products[7].id,
+      supplierId: suppliers[5].id,
+    }),
+    bomRepo.create({
+      materialName: 'ARM Cortex Chip',
+      quantity: 1,
+      unit: 'pcs',
+      unitCost: 8.5,
+      productId: products[10].id,
+      supplierId: suppliers[8].id,
+    }),
+    bomRepo.create({
+      materialName: 'PLA Bioplastic',
+      quantity: 1,
+      unit: 'kg',
+      unitCost: 6.0,
+      productId: products[15].id,
+      supplierId: suppliers[1].id,
+    }),
   ]);
   console.log('BoM items seeded');
 
-  // Purchase Orders
+  /* ─────────── Purchase Orders (backdated across 12 months) ─────────── */
   const poRepo = ds.getRepository(PurchaseOrder);
-  const orders = await poRepo.save([
-    poRepo.create({
-      orderNumber: 'PO-00001',
-      supplierId: suppliers[0].id,
-      items: [
-        {
-          productId: products[0].id,
-          productName: 'Electronic Sensor Module',
-          quantity: 100,
-          unitPrice: 45.99,
-        },
-      ],
-      totalAmount: 4599.0,
-      status: POStatus.DELIVERED,
-      expectedDeliveryDate: new Date('2025-10-15'),
-    }),
-    poRepo.create({
-      orderNumber: 'PO-00002',
-      supplierId: suppliers[1].id,
-      items: [
-        {
-          productId: products[1].id,
-          productName: 'Organic Cotton Fabric',
-          quantity: 200,
-          unitPrice: 12.5,
-        },
-      ],
-      totalAmount: 2500.0,
-      status: POStatus.SHIPPED,
-      expectedDeliveryDate: new Date('2025-11-01'),
-    }),
-    poRepo.create({
-      orderNumber: 'PO-00003',
-      supplierId: suppliers[2].id,
-      items: [
-        {
-          productId: products[4].id,
-          productName: 'Stainless Steel Bolt M10',
-          quantity: 5000,
-          unitPrice: 0.85,
-        },
-      ],
-      totalAmount: 4250.0,
-      status: POStatus.APPROVED,
-      expectedDeliveryDate: new Date('2025-11-15'),
-    }),
-    poRepo.create({
-      orderNumber: 'PO-00004',
-      supplierId: suppliers[0].id,
-      items: [
-        {
-          productId: products[2].id,
-          productName: 'Lithium Battery Cell',
-          quantity: 50,
-          unitPrice: 89.0,
-        },
-        {
-          productId: products[5].id,
-          productName: 'LED Display Panel',
-          quantity: 10,
-          unitPrice: 320.0,
-        },
-      ],
-      totalAmount: 7650.0,
-      status: POStatus.SUBMITTED,
-      expectedDeliveryDate: new Date('2025-12-01'),
-    }),
-    poRepo.create({
-      orderNumber: 'PO-00005',
-      supplierId: suppliers[1].id,
-      items: [
-        {
-          productId: products[7].id,
-          productName: 'Solar Panel 300W',
-          quantity: 20,
-          unitPrice: 250.0,
-        },
-      ],
-      totalAmount: 5000.0,
-      status: POStatus.DRAFT,
-      expectedDeliveryDate: new Date('2025-12-15'),
-    }),
-  ]);
-  console.log('Purchase orders seeded');
 
-  // Deliveries
+  // 36 POs spread across the past 12 months — 3 per month average. Status,
+  // supplier, items, value all vary so charts have signal.
+  const poStatuses: POStatus[] = [
+    POStatus.DELIVERED,
+    POStatus.DELIVERED,
+    POStatus.DELIVERED,
+    POStatus.SHIPPED,
+    POStatus.APPROVED,
+    POStatus.SUBMITTED,
+    POStatus.DRAFT,
+    POStatus.CANCELLED,
+  ];
+
+  const orders: PurchaseOrder[] = [];
+  let orderSeq = 1;
+  for (let monthBack = 11; monthBack >= 0; monthBack--) {
+    // 2-4 POs per month for a denser monthly spend curve
+    const count = 2 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < count; i++) {
+      const supplier = pick(suppliers);
+      const itemCount = 1 + Math.floor(Math.random() * 3);
+      const items: Array<{
+        productId: string;
+        productName: string;
+        quantity: number;
+        unitPrice: number;
+      }> = [];
+      let total = 0;
+      for (let j = 0; j < itemCount; j++) {
+        const product = pick(products);
+        const qty = 10 + Math.floor(Math.random() * 200);
+        const price = Number(product.unitPrice);
+        items.push({
+          productId: product.id,
+          productName: product.name,
+          quantity: qty,
+          unitPrice: price,
+        });
+        total += qty * price;
+      }
+      // Older orders skew toward delivered; recent ones are more often pending.
+      const status =
+        monthBack >= 4
+          ? pick([
+              POStatus.DELIVERED,
+              POStatus.DELIVERED,
+              POStatus.DELIVERED,
+              POStatus.CANCELLED,
+            ])
+          : pick(poStatuses);
+
+      const createdAt = monthsAgo(monthBack, i * 7);
+      const expected = new Date(createdAt);
+      expected.setDate(
+        expected.getDate() + 14 + Math.floor(Math.random() * 14),
+      );
+
+      const po = await poRepo.save(
+        poRepo.create({
+          orderNumber: `PO-${String(orderSeq++).padStart(5, '0')}`,
+          supplierId: supplier.id,
+          items,
+          totalAmount: Number(total.toFixed(2)),
+          status,
+          expectedDeliveryDate: expected,
+        }),
+      );
+      await setCreatedAt(ds, 'purchase_orders', po.id, createdAt);
+      orders.push(po);
+    }
+  }
+  console.log(`Purchase orders seeded (${orders.length} across 12 months)`);
+
+  /* ─────────── Deliveries ─────────── */
   const deliveryRepo = ds.getRepository(Delivery);
-  await deliveryRepo.save([
-    deliveryRepo.create({
-      trackingNumber: 'TRK-20251001',
-      purchaseOrderId: orders[0].id,
-      status: DeliveryStatus.DELIVERED,
-      carrier: 'TCS',
-      estimatedArrival: new Date('2025-10-15'),
-      actualArrival: new Date('2025-10-14'),
-    }),
-    deliveryRepo.create({
-      trackingNumber: 'TRK-20251002',
-      purchaseOrderId: orders[1].id,
-      status: DeliveryStatus.IN_TRANSIT,
-      carrier: 'Leopards',
-      estimatedArrival: new Date('2025-11-01'),
-    }),
-    deliveryRepo.create({
-      trackingNumber: 'TRK-20251003',
-      purchaseOrderId: orders[2].id,
-      status: DeliveryStatus.DELAYED,
-      carrier: 'DHL',
-      estimatedArrival: new Date('2025-10-20'),
-      notes: 'Customs delay at port',
-    }),
-    deliveryRepo.create({
-      trackingNumber: 'TRK-20251004',
-      purchaseOrderId: orders[3].id,
-      status: DeliveryStatus.PENDING,
-      carrier: 'FedEx',
-      estimatedArrival: new Date('2025-12-01'),
-    }),
-  ]);
-  console.log('Deliveries seeded');
+  const carriers = ['TCS', 'Leopards', 'DHL', 'FedEx', 'M&P', 'BlueEx'];
+  const deliveryRows: Delivery[] = [];
+  let trackingSeq = 1;
 
-  // Tasks
+  for (const order of orders) {
+    // Only orders past the "approved" stage have deliveries
+    if (
+      order.status === POStatus.DRAFT ||
+      order.status === POStatus.SUBMITTED ||
+      order.status === POStatus.CANCELLED
+    ) {
+      continue;
+    }
+
+    const status =
+      order.status === POStatus.DELIVERED
+        ? DeliveryStatus.DELIVERED
+        : order.status === POStatus.SHIPPED
+          ? pick([
+              DeliveryStatus.IN_TRANSIT,
+              DeliveryStatus.IN_TRANSIT,
+              DeliveryStatus.DELAYED,
+            ])
+          : DeliveryStatus.PENDING;
+
+    const estimated = order.expectedDeliveryDate ?? new Date();
+    const partial: Partial<Delivery> = {
+      trackingNumber: `TRK-${String(trackingSeq++).padStart(8, '0')}`,
+      purchaseOrderId: order.id,
+      status,
+      carrier: pick(carriers),
+      estimatedArrival: estimated,
+    };
+    if (status === DeliveryStatus.DELIVERED) {
+      partial.actualArrival = new Date(
+        estimated.getTime() - Math.random() * 4 * 86400000,
+      );
+    }
+    if (status === DeliveryStatus.DELAYED) {
+      partial.notes = 'Customs delay at port';
+    }
+    deliveryRows.push(deliveryRepo.create(partial));
+  }
+  // A couple of explicit returned-status deliveries for chart variety
+  if (orders.length > 2) {
+    const returnedPartial: Partial<Delivery> = {
+      trackingNumber: `TRK-${String(trackingSeq++).padStart(8, '0')}`,
+      purchaseOrderId: orders[0].id,
+      status: DeliveryStatus.RETURNED,
+      carrier: 'DHL',
+      estimatedArrival: new Date(),
+      notes: 'Damaged in transit',
+    };
+    deliveryRows.push(deliveryRepo.create(returnedPartial));
+  }
+  await deliveryRepo.save(deliveryRows);
+  console.log(`Deliveries seeded (${deliveryRows.length})`);
+
+  /* ─────────── Tasks ─────────── */
   const taskRepo = ds.getRepository(Task);
   await taskRepo.save([
     taskRepo.create({
@@ -373,9 +674,9 @@ async function seed() {
       status: TaskStatus.IN_PROGRESS,
       priority: TaskPriority.HIGH,
       department: 'Compliance',
-      assignedToId: manager.id,
+      assignedToId: managers[0].id,
       createdById: admin.id,
-      dueDate: new Date('2025-11-30'),
+      dueDate: new Date(Date.now() + 14 * 86400000),
     }),
     taskRepo.create({
       title: 'Update inventory counts',
@@ -383,27 +684,27 @@ async function seed() {
       status: TaskStatus.TODO,
       priority: TaskPriority.MEDIUM,
       department: 'Warehouse',
-      assignedToId: manager.id,
+      assignedToId: managers[1].id,
       createdById: admin.id,
-      dueDate: new Date('2025-11-15'),
+      dueDate: new Date(Date.now() + 7 * 86400000),
     }),
     taskRepo.create({
       title: 'Negotiate new packaging contract',
       status: TaskStatus.TODO,
       priority: TaskPriority.LOW,
       department: 'Procurement',
-      createdById: admin.id,
-      dueDate: new Date('2025-12-01'),
+      createdById: adminTwo.id,
+      dueDate: new Date(Date.now() + 30 * 86400000),
     }),
     taskRepo.create({
-      title: 'Fix delivery delay for PO-00003',
-      description: 'Contact DHL about customs issue',
+      title: 'Resolve delivery delays',
+      description: 'Coordinate with carriers on delayed shipments',
       status: TaskStatus.REVIEW,
       priority: TaskPriority.URGENT,
       department: 'Logistics',
-      assignedToId: manager.id,
+      assignedToId: managers[2].id,
       createdById: admin.id,
-      dueDate: new Date('2025-11-05'),
+      dueDate: new Date(Date.now() + 3 * 86400000),
     }),
     taskRepo.create({
       title: 'Generate Q4 demand forecast',
@@ -413,60 +714,135 @@ async function seed() {
       assignedToId: admin.id,
       createdById: admin.id,
     }),
+    taskRepo.create({
+      title: 'Audit textile suppliers',
+      description: 'On-site audit for Fair Trade renewal',
+      status: TaskStatus.IN_PROGRESS,
+      priority: TaskPriority.MEDIUM,
+      department: 'Compliance',
+      assignedToId: managers[3].id,
+      createdById: admin.id,
+      dueDate: new Date(Date.now() + 21 * 86400000),
+    }),
+    taskRepo.create({
+      title: 'Onboard EcoSteel Works',
+      status: TaskStatus.COMPLETED,
+      priority: TaskPriority.MEDIUM,
+      department: 'Procurement',
+      assignedToId: managers[1].id,
+      createdById: adminTwo.id,
+    }),
+    taskRepo.create({
+      title: 'Renew ISO 14001 certification',
+      status: TaskStatus.TODO,
+      priority: TaskPriority.HIGH,
+      department: 'Compliance',
+      assignedToId: managers[0].id,
+      createdById: admin.id,
+      dueDate: new Date(Date.now() + 45 * 86400000),
+    }),
+    taskRepo.create({
+      title: 'Review BoM costs for solar line',
+      status: TaskStatus.IN_PROGRESS,
+      priority: TaskPriority.LOW,
+      department: 'Engineering',
+      assignedToId: managers[4].id,
+      createdById: admin.id,
+      dueDate: new Date(Date.now() + 10 * 86400000),
+    }),
+    taskRepo.create({
+      title: 'Q1 budget approval',
+      status: TaskStatus.COMPLETED,
+      priority: TaskPriority.HIGH,
+      department: 'Finance',
+      assignedToId: admin.id,
+      createdById: adminTwo.id,
+    }),
   ]);
-  console.log('Tasks seeded');
+  console.log('Tasks seeded (10 total)');
 
-  // Notifications
+  /* ─────────── Notifications ─────────── */
   const notifRepo = ds.getRepository(Notification);
   await notifRepo.save([
     notifRepo.create({
       title: 'Low Stock Alert',
       message:
-        'Organic Cotton Fabric (OCF-002) stock is below reorder level. Current: 8, Reorder Level: 30',
+        'Organic Cotton Fabric (OCF-002) stock below reorder level. Current: 8, Reorder: 30',
       type: NotificationType.LOW_STOCK,
       userId: admin.id,
     }),
     notifRepo.create({
       title: 'Low Stock Alert',
       message:
-        'Stainless Steel Bolt M10 (SSB-005) critically low. Current: 5, Reorder Level: 100',
+        'Stainless Steel Bolt M10 (SSB-005) critically low. Current: 5, Reorder: 100',
       type: NotificationType.LOW_STOCK,
       userId: admin.id,
     }),
     notifRepo.create({
-      title: 'Delivery Delayed',
+      title: 'Low Stock Alert',
       message:
-        'Delivery TRK-20251003 for PO-00003 is delayed due to customs issues',
+        'Power Cable 14AWG (PC14-015) needs reorder. Current: 9, Reorder: 100',
+      type: NotificationType.LOW_STOCK,
+      userId: managers[0].id,
+    }),
+    notifRepo.create({
+      title: 'Delivery Delayed',
+      message: 'Multiple shipments are showing customs delays this week.',
       type: NotificationType.DELIVERY_DELAY,
       userId: admin.id,
     }),
     notifRepo.create({
       title: 'ESG Compliance Warning',
       message:
-        'FastLogistics Hub has ESG score below threshold (1.8). Consider reviewing partnership.',
+        'FastLogistics Hub ESG score below threshold (1.8). Review partnership.',
       type: NotificationType.ESG_NON_COMPLIANCE,
       userId: admin.id,
+    }),
+    notifRepo.create({
+      title: 'ESG Compliance Warning',
+      message: 'Premier Plastics ESG score below 2.5 — schedule audit.',
+      type: NotificationType.ESG_NON_COMPLIANCE,
+      userId: adminTwo.id,
     }),
     notifRepo.create({
       title: 'Task Assigned',
       message: 'You have been assigned: Review supplier ESG compliance reports',
       type: NotificationType.TASK_ASSIGNED,
-      userId: manager.id,
+      userId: managers[0].id,
+    }),
+    notifRepo.create({
+      title: 'Task Assigned',
+      message: 'You have been assigned: Audit textile suppliers',
+      type: NotificationType.TASK_ASSIGNED,
+      userId: managers[3].id,
     }),
     notifRepo.create({
       title: 'Order Update',
-      message: 'PO-00001 has been delivered successfully',
+      message: `${orders[0]?.orderNumber ?? 'PO-00001'} has been delivered successfully`,
       type: NotificationType.ORDER_STATUS,
       userId: admin.id,
       isRead: true,
     }),
+    notifRepo.create({
+      title: 'Order Update',
+      message: 'New PO submitted to GreenMaterials Co. — pending approval.',
+      type: NotificationType.ORDER_STATUS,
+      userId: managers[1].id,
+    }),
+    notifRepo.create({
+      title: 'System Update',
+      message: 'Demand forecast model retrained with Q3 sales data.',
+      type: NotificationType.GENERAL,
+      userId: admin.id,
+      isRead: true,
+    }),
   ]);
-  console.log('Notifications seeded');
+  console.log('Notifications seeded (11 total)');
 
-  // Forecasts
+  /* ─────────── Forecasts ─────────── */
   const forecastRepo = ds.getRepository(Forecast);
   const baseDate = new Date();
-  for (const product of products.slice(0, 4)) {
+  for (const product of products.slice(0, 8)) {
     const forecasts: Forecast[] = [];
     for (let i = 1; i <= 6; i++) {
       const d = new Date(baseDate);
@@ -491,11 +867,22 @@ async function seed() {
   }
   console.log('Forecasts seeded');
 
+  // Reference supplierUser so it isn't flagged as unused; it's the dedicated
+  // "supplier" role login used for the supplier portal flows.
+  void supplierUser;
+
   console.log('\n=== Seed Complete ===');
-  console.log('Login credentials:');
-  console.log('  Admin:    admin@ngim.com / password123');
-  console.log('  Manager:  manager@ngim.com / password123');
-  console.log('  Supplier: supplier@ngim.com / password123');
+  console.log('Login credentials (all share password: password123):');
+  console.log('  Admin:    admin@ngim.com');
+  console.log('  Admin:    sara.admin@ngim.com');
+  console.log('  Manager:  manager@ngim.com');
+  console.log('  Manager:  ayesha.manager@ngim.com');
+  console.log('  Manager:  bilal.manager@ngim.com');
+  console.log('  Manager:  hina.manager@ngim.com');
+  console.log('  Manager:  imran.manager@ngim.com');
+  console.log('  Supplier: supplier@ngim.com');
+  console.log('  Supplier: zara.supplier@ngim.com');
+  console.log('  Supplier: omar.supplier@ngim.com');
 
   await ds.destroy();
 }

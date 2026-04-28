@@ -32,7 +32,6 @@ describe('registerSchema', () => {
         name: 'Ada',
         email: 'a@b.com',
         password: 'shorty1',
-        role: 'manager',
       }).success,
     ).toBe(false);
     expect(
@@ -40,7 +39,6 @@ describe('registerSchema', () => {
         name: 'Ada',
         email: 'a@b.com',
         password: 'longenoughbutnonum',
-        role: 'manager',
       }).success,
     ).toBe(false);
     expect(
@@ -48,25 +46,14 @@ describe('registerSchema', () => {
         name: 'Ada',
         email: 'a@b.com',
         password: 'longenough1',
-        role: 'manager',
       }).success,
     ).toBe(true);
-  });
-
-  it('rejects unknown roles', () => {
-    const r = registerSchema.safeParse({
-      name: 'Ada',
-      email: 'a@b.com',
-      password: 'longenough1',
-      role: 'superadmin',
-    });
-    expect(r.success).toBe(false);
   });
 });
 
 describe('formatZodErrors', () => {
   it('returns one message per field, first wins', () => {
-    const r = registerSchema.safeParse({ name: '', email: 'bad', password: 'x', role: 'manager' });
+    const r = registerSchema.safeParse({ name: '', email: 'bad', password: 'x' });
     expect(r.success).toBe(false);
     if (r.success) return;
     const out = formatZodErrors(r.error);

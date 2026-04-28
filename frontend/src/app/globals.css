@@ -198,3 +198,189 @@ tbody tr {
   backdrop-filter: saturate(180%) blur(8px);
   -webkit-backdrop-filter: saturate(180%) blur(8px);
 }
+
+/* ─── Sliding auth card (Florin Pop pattern) ───────────────────────────────
+ * Two forms share one card. The colored overlay is wider than the card half
+ * and slides horizontally so only one of its two inner panels is visible at
+ * a time. `.is-register` on the parent flips both forms and the overlay. */
+
+.sa-form {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 50%;
+  padding: 36px 44px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: #ffffff;
+  transition:
+    transform 0.6s ease-in-out,
+    opacity 0.6s ease-in-out;
+}
+.sa-form.sa-signin {
+  z-index: 2;
+}
+.sa-form.sa-signup {
+  opacity: 0;
+  z-index: 1;
+}
+.is-register .sa-form.sa-signin {
+  transform: translateX(100%);
+}
+.is-register .sa-form.sa-signup {
+  transform: translateX(100%);
+  opacity: 1;
+  z-index: 5;
+  animation: saBringForward 0.6s;
+}
+@keyframes saBringForward {
+  0%,
+  49.99% {
+    opacity: 0;
+    z-index: 1;
+  }
+  50%,
+  100% {
+    opacity: 1;
+    z-index: 5;
+  }
+}
+
+.sa-overlay {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 50%;
+  height: 100%;
+  overflow: hidden;
+  transition: transform 0.6s ease-in-out;
+  z-index: 100;
+}
+.is-register .sa-overlay {
+  transform: translateX(-100%);
+}
+.sa-overlay-bg {
+  position: relative;
+  left: -100%;
+  width: 200%;
+  height: 100%;
+  background: linear-gradient(135deg, #2f9d6e 0%, #4cae89 100%);
+  color: white;
+  transition: transform 0.6s ease-in-out;
+}
+.is-register .sa-overlay-bg {
+  transform: translateX(50%);
+}
+.sa-panel {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  width: 50%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 36px 44px;
+  text-align: center;
+  transition: transform 0.6s ease-in-out;
+}
+.sa-panel-left {
+  left: 0;
+  transform: translateX(-20%);
+}
+.sa-panel-right {
+  right: 0;
+  transform: translateX(0);
+}
+.is-register .sa-panel-left {
+  transform: translateX(0);
+}
+.is-register .sa-panel-right {
+  transform: translateX(20%);
+}
+
+.sa-ghost-btn {
+  background: transparent;
+  color: #ffffff;
+  border: 1.5px solid rgba(255, 255, 255, 0.85);
+  border-radius: 999px;
+  padding: 10px 36px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  transition:
+    background-color 0.2s,
+    transform 0.1s;
+}
+.sa-ghost-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.sa-ghost-btn:active {
+  transform: scale(0.97);
+}
+
+@media (max-width: 720px) {
+  /* On narrow viewports the card shrinks to a single column: the visible form
+     lives at the top, and the overlay collapses to a 140px header. */
+  .sa-card {
+    height: auto !important;
+    min-height: 600px;
+  }
+  .sa-form {
+    width: 100%;
+    padding: 28px 20px;
+    position: relative;
+  }
+  .sa-form.sa-signup {
+    display: none;
+  }
+  .is-register .sa-form.sa-signin {
+    display: none;
+    transform: none;
+  }
+  .is-register .sa-form.sa-signup {
+    display: flex;
+    transform: none;
+    animation: none;
+  }
+  .sa-overlay {
+    position: relative;
+    left: 0;
+    width: 100%;
+    height: 140px;
+    transform: none !important;
+  }
+  .sa-overlay-bg {
+    left: 0;
+    width: 100%;
+    transform: none !important;
+  }
+  .sa-panel {
+    width: 100%;
+    transform: none !important;
+    padding: 20px;
+  }
+  .sa-panel-left {
+    display: none;
+  }
+  .is-register .sa-panel-left {
+    display: flex;
+  }
+  .is-register .sa-panel-right {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sa-form,
+  .sa-overlay,
+  .sa-overlay-bg,
+  .sa-panel {
+    transition: none !important;
+  }
+  .is-register .sa-form.sa-signup {
+    animation: none;
+  }
+}

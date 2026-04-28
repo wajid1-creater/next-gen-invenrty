@@ -14,7 +14,6 @@ export const registerSchema = z.object({
     .min(8, 'Password must be at least 8 characters')
     .regex(/[A-Za-z]/, 'Password must contain a letter')
     .regex(/\d/, 'Password must contain a number'),
-  role: z.enum(['admin', 'manager', 'supplier']),
 });
 export type RegisterInput = z.infer<typeof registerSchema>;
 
